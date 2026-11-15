@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <stdatomic.h>
+#include <stdbool.h>
+#include <time.h>
 #include <stdio.h>
 
 #define QUEUE_CAPACITY 256
@@ -13,11 +15,11 @@ typedef struct {
 
 struct NxScheduler {
     Task tasks[QUEUE_CAPACITY];
-    atomic_int head;
-    atomic_int tail;
+    _Atomic int head;
+    _Atomic int tail;
     int num_threads;
     pthread_t *threads;
-    atomic_bool running;
+    _Atomic bool running;
 };
 
 static void* worker_thread(void *arg) {
@@ -34,7 +36,6 @@ static void* worker_thread(void *arg) {
                 }
             }
         } else {
-            // استراحت کوتاه برای جلوگیری از اشغال ۱۰۰ درصدی CPU (CPU Spinning)
             struct timespec ts = {0, 1000000}; // 1ms
             nanosleep(&ts, NULL);
         }
@@ -64,7 +65,7 @@ bool nx_sched_push(NxScheduler *sched, NxTaskFunc func, void *arg) {
     int t = atomic_load(&sched->tail);
 
     if ((t + 1) % QUEUE_CAPACITY == (h % QUEUE_CAPACITY)) {
-        return false; // صف پر است
+        return false;
     }
 
     sched->tasks[t % QUEUE_CAPACITY] = (Task){func, arg};
