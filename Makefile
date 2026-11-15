@@ -1,5 +1,6 @@
 CC = gcc
-CFLAGS = -std=c11 -O3 -Wall -Wextra -pthread -Iinclude
+# اضافه شدن فلگ‌های امنیتی و AddressSanitizer برای شکار هرگونه باگ حافظه زیر تست سنگین
+CFLAGS = -std=c11 -O3 -Wall -Wextra -Werror -pthread -fsanitize=address,undefined -Iinclude
 SRC_DIR = src
 INC_DIR = include
 EX_DIR = examples
