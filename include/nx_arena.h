@@ -4,10 +4,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define NX_ALIGNMENT 64
-
 typedef struct {
-    uint8_t *buffer;
+    char *buffer;
     size_t capacity;
     size_t offset;
 } NxArena;
@@ -15,6 +13,6 @@ typedef struct {
 NxArena* nx_arena_create(size_t capacity);
 void* nx_arena_alloc(NxArena *arena, size_t size);
 void nx_arena_reset(NxArena *arena);
-void nx_arena_free(NxArena *arena);
+void nx_arena_destroy(NxArena *arena);
 
-#endif
+#endif // NX_ARENA_H
