@@ -1,5 +1,6 @@
 CC = gcc
-CFLAGS = -std=c11 -O3 -Wall -Wextra -pthread -Iinclude
+# اضافه کردن فلگ‌های امنیتی AddressSanitizer برای شکار باگ‌های حافظه
+CFLAGS = -std=c11 -O3 -Wall -Wextra -pthread -Iinclude -fsanitize=address,undefined -fno-omit-frame-pointer
 
 all: nx_hub nx_bench test_neon test_log
 
@@ -14,6 +15,9 @@ test_neon: src/nx_neon.c tests/test_neon.c
 
 test_log: src/nx_log.c tests/test_log.c
 	$(CC) $(CFLAGS) src/nx_log.c tests/test_log.c -o test_log
+
+test: all
+	./tests/run_all.sh
 
 clean:
 	rm -f nx_hub nx_bench test_neon test_log test_arena
