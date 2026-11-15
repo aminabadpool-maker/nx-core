@@ -7,6 +7,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <fcntl.h>
+#include <stdbool.h>
 
 struct NxNetServer {
     int server_fd;
@@ -39,7 +40,7 @@ NxNetServer* nx_net_server_init(int port) {
         return NULL;
     }
 
-    if (listen(server->server_fd, 16) < 0) {
+    if (listen(server->server_fd, 64) < 0) {
         close(server->server_fd);
         free(server);
         return NULL;
@@ -61,8 +62,8 @@ bool nx_net_handle_connection(NxNetServer *server, char *buffer, size_t max_len)
     if (bytes_read > 0) {
         buffer[bytes_read] = '\0';
         
-        // پاسخ ساده HTTP/TCP به کلاینت
-        const char *response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nHello from nx-core Agent Network!\n";
+        // پاسخ پایدار و استاندارد به کلاینت
+        const char *response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\n[nx-core daemon] Connection accepted and processed securely.\n";
         write(client_fd, response, strlen(response));
     }
 
