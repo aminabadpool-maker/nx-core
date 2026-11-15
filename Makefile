@@ -1,12 +1,11 @@
 CC = gcc
-# اضافه شدن فلگ‌های امنیتی و AddressSanitizer برای شکار هرگونه باگ حافظه زیر تست سنگین
 CFLAGS = -std=c11 -O3 -Wall -Wextra -Werror -pthread -fsanitize=address,undefined -Iinclude
 SRC_DIR = src
 INC_DIR = include
 EX_DIR = examples
 BENCH_DIR = bench
 
-TARGETS = net_test kv_test net_bench stress_test arena_test integration_test llm_agent_test brutal_stress advanced_test
+TARGETS = net_test kv_test net_bench stress_test arena_test integration_test llm_agent_test brutal_stress advanced_test proto_test
 
 all: $(TARGETS)
 
@@ -35,6 +34,9 @@ brutal_stress: $(BENCH_DIR)/brutal_stress.c $(SRC_DIR)/nx_arena.c $(SRC_DIR)/nx_
 	$(CC) $(CFLAGS) $^ -o $@
 
 advanced_test: $(EX_DIR)/advanced_test.c $(SRC_DIR)/nx_lockfree.c $(SRC_DIR)/nx_simd.c $(SRC_DIR)/nx_mmap_db.c $(SRC_DIR)/nx_epoll.c
+	$(CC) $(CFLAGS) $^ -o $@
+
+proto_test: $(EX_DIR)/proto_zerocopy_test.c $(SRC_DIR)/nx_proto.c
 	$(CC) $(CFLAGS) $^ -o $@
 
 clean:
