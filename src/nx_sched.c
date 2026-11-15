@@ -1,27 +1,43 @@
 #include "nx_sched.h"
 #include <stdlib.h>
 #include <pthread.h>
-#include <unistd.h>
+#include <stdatomic.h>
+#include <stdio.h>
 
-static NxWorkQueue global_queue = { .head = 0, .tail = 0 };
-static pthread_t *worker_threads = NULL;
+#define QUEUE_CAPACITY 256
 
-static void* worker_routine(void *arg) {
+typedef struct {
+    NxTaskFunc func;
+    void *arg;
+} Task;
+
+struct NxScheduler {
+    Task tasks[QUEUE_CAPACITY];
+    atomic_int head;
+    atomic_int tail;
+    int num_threads;
+    pthread_t *threads;
+    atomic_bool running;
+};
+
+static void* worker_thread(void *arg) {
     NxScheduler *sched = (NxScheduler*)arg;
-    while (sched->running) {
-        size_t h = atomic_load(&global_queue.head);
-        size_t t = atomic_load(&global_queue.tail);
-
+    while (atomic_load(&sched->running)) {
+        int h = atomic_load(&sched->head);
+        int t = atomic_load(&sched->tail);
+        
         if (h != t) {
-            if (atomic_compare_exchange_weak(&global_queue.head, &h, (h + 1) % NX_QUEUE_CAPACITY)) {
-                NxTask task = global_queue.tasks[h];
+            Task task = sched->tasks[h % QUEUE_CAPACITY];
+            if (atomic_compare_exchange_weak(&sched->head, &h, (h + 1) % QUEUE_CAPACITY)) {
                 if (task.func) {
                     task.func(task.arg);
                 }
-                continue;
             }
+        } else {
+            // استراحت کوتاه برای جلوگیری از اشغال ۱۰۰ درصدی CPU (CPU Spinning)
+            struct timespec ts = {0, 1000000}; // 1ms
+            nanosleep(&ts, NULL);
         }
-        usleep(1000);
     }
     return NULL;
 }
@@ -30,46 +46,47 @@ NxScheduler* nx_sched_init(int num_threads) {
     NxScheduler *sched = (NxScheduler*)malloc(sizeof(NxScheduler));
     if (!sched) return NULL;
 
+    atomic_init(&sched->head, 0);
+    atomic_init(&sched->tail, 0);
+    atomic_store(&sched->running, true);
     sched->num_threads = num_threads;
-    sched->running = 1;
-
-    worker_threads = (pthread_t*)malloc(sizeof(pthread_t) * num_threads);
+    
+    sched->threads = (pthread_t*)malloc(sizeof(pthread_t) * num_threads);
     for (int i = 0; i < num_threads; i++) {
-        pthread_create(&worker_threads[i], NULL, worker_routine, sched);
+        pthread_create(&sched->threads[i], NULL, worker_thread, sched);
     }
 
     return sched;
 }
 
 bool nx_sched_push(NxScheduler *sched, NxTaskFunc func, void *arg) {
-    (void)sched;
-    size_t t = atomic_load(&global_queue.tail);
-    size_t h = atomic_load(&global_queue.head);
+    int h = atomic_load(&sched->head);
+    int t = atomic_load(&sched->tail);
 
-    size_t next_tail = (t + 1) % NX_QUEUE_CAPACITY;
-    if (next_tail == h) {
-        return false;
+    if ((t + 1) % QUEUE_CAPACITY == (h % QUEUE_CAPACITY)) {
+        return false; // صف پر است
     }
 
-    global_queue.tasks[t].func = func;
-    global_queue.tasks[t].arg = arg;
-    atomic_store(&global_queue.tail, next_tail);
+    sched->tasks[t % QUEUE_CAPACITY] = (Task){func, arg};
+    atomic_store(&sched->tail, (t + 1) % QUEUE_CAPACITY);
     return true;
 }
 
 void nx_sched_wait(NxScheduler *sched) {
-    (void)sched;
-    while (atomic_load(&global_queue.head) != atomic_load(&global_queue.tail)) {
-        usleep(1000);
+    while (atomic_load(&sched->head) != atomic_load(&sched->tail)) {
+        struct timespec ts = {0, 1000000};
+        nanosleep(&ts, NULL);
     }
 }
 
 void nx_sched_destroy(NxScheduler *sched) {
     if (!sched) return;
-    sched->running = 0;
+    atomic_store(&sched->running, false);
+    
     for (int i = 0; i < sched->num_threads; i++) {
-        pthread_join(worker_threads[i], NULL);
+        pthread_join(sched->threads[i], NULL);
     }
-    free(worker_threads);
+
+    free(sched->threads);
     free(sched);
 }
