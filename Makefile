@@ -5,7 +5,7 @@ INC_DIR = include
 EX_DIR = examples
 BENCH_DIR = bench
 
-TARGETS = net_test kv_test net_bench stress_test arena_test integration_test llm_agent_test brutal_stress
+TARGETS = net_test kv_test net_bench stress_test arena_test integration_test llm_agent_test brutal_stress advanced_test
 
 all: $(TARGETS)
 
@@ -33,7 +33,10 @@ llm_agent_test: $(EX_DIR)/llm_agent_test.c $(SRC_DIR)/nx_arena.c $(SRC_DIR)/nx_l
 brutal_stress: $(BENCH_DIR)/brutal_stress.c $(SRC_DIR)/nx_arena.c $(SRC_DIR)/nx_threadpool.c $(SRC_DIR)/nx_metrics.c
 	$(CC) $(CFLAGS) $^ -o $@
 
+advanced_test: $(EX_DIR)/advanced_test.c $(SRC_DIR)/nx_lockfree.c $(SRC_DIR)/nx_simd.c $(SRC_DIR)/nx_mmap_db.c $(SRC_DIR)/nx_epoll.c
+	$(CC) $(CFLAGS) $^ -o $@
+
 clean:
-	rm -f $(TARGETS) test_store.db stress_test.db *.o src/*.o
+	rm -f $(TARGETS) test_store.db stress_test.db test_mmap.db *.o src/*.o
 
 .PHONY: all clean
