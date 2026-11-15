@@ -1,23 +1,26 @@
 CC = gcc
-# اضافه کردن فلگ‌های امنیتی AddressSanitizer برای شکار باگ‌های حافظه
-CFLAGS = -std=c11 -O3 -Wall -Wextra -pthread -Iinclude -fsanitize=address,undefined -fno-omit-frame-pointer
+CFLAGS = -std=c11 -O3 -Wall -Wextra -pthread -Iinclude
 
-all: nx_hub nx_bench test_neon test_log
+SRC_DIR = src
+INC_DIR = include
+EX_DIR = examples
+BENCH_DIR = bench
 
-nx_hub: src/nx_arena.c src/nx_reflect.c src/nx_json.c src/nx_mcp.c src/nx_sched.c src/nx_equity.c src/nx_log.c examples/nx_hub.c
-	$(CC) $(CFLAGS) src/nx_arena.c src/nx_reflect.c src/nx_json.c src/nx_mcp.c src/nx_sched.c src/nx_equity.c src/nx_log.c examples/nx_hub.c -o nx_hub
+# نام فایل‌های اجرایی نهایی
+TARGETS = net_test kv_test net_bench
 
-nx_bench: src/nx_arena.c src/nx_sched.c src/nx_log.c bench/nx_bench.c
-	$(CC) $(CFLAGS) src/nx_arena.c src/nx_sched.c src/nx_log.c bench/nx_bench.c -o nx_bench
+all: $(TARGETS)
 
-test_neon: src/nx_neon.c tests/test_neon.c
-	$(CC) $(CFLAGS) src/nx_neon.c tests/test_neon.c -o test_neon
+net_test: $(EX_DIR)/net_test.c $(SRC_DIR)/nx_net.c
+	$(CC) $(CFLAGS) $^ -o $@
 
-test_log: src/nx_log.c tests/test_log.c
-	$(CC) $(CFLAGS) src/nx_log.c tests/test_log.c -o test_log
+kv_test: $(EX_DIR)/kv_test.c $(SRC_DIR)/nx_kv.c
+	$(CC) $(CFLAGS) $^ -o $@
 
-test: all
-	./tests/run_all.sh
+net_bench: $(BENCH_DIR)/net_bench.c
+	$(CC) $(CFLAGS) $< -o $@
 
 clean:
-	rm -f nx_hub nx_bench test_neon test_log test_arena
+	rm -f $(TARGETS) test_store.db *.o
+
+.PHONY: all clean
